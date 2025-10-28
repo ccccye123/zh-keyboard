@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { KeyboardPosition } from '@zh-keyboard/core'
 import type { KeyBoardMode, KeyEvent } from '../types'
-import { useActiveElement, useElementSize, useEventListener } from '@vueuse/core'
+import { useActiveElement, useDebounceFn, useElementSize, useEventListener } from '@vueuse/core'
 import { calculateKeyboardPosition, delToInputElement, isInputElement, writeToInputElement } from '@zh-keyboard/core'
 import { computed, nextTick, ref, watch, watchEffect } from 'vue'
 import { useHandwritingRecognizer } from '../utils/useHandwritingRecognizer'
@@ -72,6 +72,7 @@ const showKeyboard = computed(() => {
 })
 
 const { height: keyboardHeight } = useElementSize(keyboardRef)
+const isKeyboardInitialized = ref(false)
 
 // 监听 inputElement 的变化
 watchEffect(() => {
@@ -83,13 +84,24 @@ watchEffect(() => {
   }
 })
 
-watch([showKeyboard, keyboardHeight, inputElement], () => {
+// 只在键盘首次显示或输入框变化时更新位置，避免因高度变化导致的无限循环
+watch([showKeyboard, inputElement], () => {
   if (showKeyboard.value && keyboardHeight.value) {
+    nextTick(() => {
+      updateKeyboardPosition()
+      isKeyboardInitialized.value = true
+    })
+  }
+})
+
+// 键盘首次初始化时更新位置
+watch(keyboardHeight, (newHeight, oldHeight) => {
+  if (!isKeyboardInitialized.value && newHeight && newHeight !== oldHeight) {
     nextTick(() => {
       updateKeyboardPosition()
     })
   }
-})
+}, { once: true })
 
 // 判断键盘是否被禁用（当前没有可输入的元素时禁用）
 const isKeyboardDisabled = computed(() => {
@@ -111,9 +123,10 @@ function updateKeyboardPosition() {
   keyboardPosition.value = newPosition
 }
 
-// 页面滚动或窗口大小变化时更新键盘位置
-useEventListener(window, 'scroll', updateKeyboardPosition, { passive: true })
-useEventListener(window, 'resize', updateKeyboardPosition, { passive: true })
+// 页面滚动或窗口大小变化时更新键盘位置（添加防抖以避免频繁触发）
+const debouncedUpdatePosition = useDebounceFn(updateKeyboardPosition, 100)
+useEventListener(window, 'scroll', debouncedUpdatePosition, { passive: true })
+useEventListener(window, 'resize', debouncedUpdatePosition, { passive: true })
 
 function handleKeyEvent(payload: KeyEvent) {
   if (payload.isControl) {

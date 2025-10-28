@@ -49,32 +49,46 @@ const ZHKeyboardContent: React.FC<ZhKeyboardProps> = ({
   }, [mode])
 
   const [isPositioned, setIsPositioned] = useState(false)
+  const prevActiveElementRef = useRef<HTMLInputElement | null>(null)
 
-  const updateKeyboardPosition = useCallback(() => {
-    if (keyboardHeight) {
-      const newPosition = calculateKeyboardPosition(
-        activeElement,
-        keyboardRef.current,
-        position,
-      )
-      setKeyboardPosition(newPosition)
-    }
+  // 位置更新函数
+  const updatePosition = useCallback(() => {
+    if (!keyboardHeight)
+      return
 
-    setTimeout(() => {
-      setIsPositioned(true)
-    }, 0)
+    const newPosition = calculateKeyboardPosition(
+      activeElement,
+      keyboardRef.current,
+      position,
+    )
+    setKeyboardPosition(newPosition)
   }, [activeElement, position, keyboardHeight])
 
   const showKeyboard = useMemo(() => {
     return position === 'static' || isInputElement(activeElement)
   }, [activeElement, position])
 
+  // 当showKeyboard或activeElement变化时更新位置
   useLayoutEffect(() => {
-    if (showKeyboard) {
-      setIsPositioned(false)
-      updateKeyboardPosition()
+    // 检查activeElement是否真的变化了
+    const activeElementChanged = prevActiveElementRef.current !== activeElement
+
+    if (showKeyboard && keyboardHeight && activeElementChanged) {
+      prevActiveElementRef.current = activeElement
+      updatePosition()
     }
-  }, [showKeyboard, updateKeyboardPosition])
+  }, [showKeyboard, activeElement, updatePosition, keyboardHeight])
+
+  // 键盘首次挂载时的初始化
+  useLayoutEffect(() => {
+    if (keyboardHeight && !isPositioned) {
+      updatePosition()
+      const timer = setTimeout(() => {
+        setIsPositioned(true)
+      }, 0)
+      return () => clearTimeout(timer)
+    }
+  }, [keyboardHeight, isPositioned, updatePosition])
 
   useLayoutEffect(() => {
     if (activeElement && isInputElement(activeElement)) {
@@ -91,8 +105,17 @@ const ZHKeyboardContent: React.FC<ZhKeyboardProps> = ({
     return !isInputElement(activeElement)
   }, [disableWhenNoFocus, activeElement])
 
-  useEventListener('scroll', updateKeyboardPosition, window, { passive: true })
-  useEventListener('resize', updateKeyboardPosition, window, { passive: true })
+  // 使用防抖来处理scroll和resize事件，避免频繁更新
+  const debouncedUpdatePosition = useMemo(() => {
+    let timer: ReturnType<typeof setTimeout>
+    return () => {
+      clearTimeout(timer)
+      timer = setTimeout(updatePosition, 100)
+    }
+  }, [updatePosition])
+
+  useEventListener('scroll', debouncedUpdatePosition, window, { passive: true })
+  useEventListener('resize', debouncedUpdatePosition, window, { passive: true })
 
   const handleKeyEvent = useCallback((payload: KeyEvent) => {
     if (payload.isControl) {
