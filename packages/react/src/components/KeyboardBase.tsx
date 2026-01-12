@@ -1,5 +1,6 @@
 import type { KeyBoardMode, KeyEvent } from '../types'
-import React, { useMemo, useState } from 'react'
+import { createKeyRepeater } from '@zh-keyboard/core'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import keyboardBackspace from '../assets/icons/keyboard-backspace.svg'
 import keyboardCaps from '../assets/icons/keyboard-caps.svg'
 import keyboardReturn from '../assets/icons/keyboard-return.svg'
@@ -17,6 +18,14 @@ interface KeyboardBaseProps {
 const KeyboardBase: React.FC<KeyboardBaseProps> = ({ enableHandwriting, mode, onKey, setMode }) => {
   const [isUpperCase, setIsUpperCase] = useState(false)
   const [pinyin, setPinyin] = useState('')
+
+  const repeaterRef = useRef(createKeyRepeater())
+
+  useEffect(() => {
+    return () => {
+      repeaterRef.current.stop()
+    }
+  }, [])
 
   const isChineseMode = useMemo(() => mode === 'zh', [mode])
   const showUpperCase = useMemo(() => isChineseMode ? true : isUpperCase, [isChineseMode, isUpperCase])
@@ -79,6 +88,20 @@ const KeyboardBase: React.FC<KeyboardBaseProps> = ({ enableHandwriting, mode, on
     return !enableHandwriting
   }, [enableHandwriting])
 
+  function startRepeat(e: React.PointerEvent, action: () => void) {
+    e.preventDefault()
+    ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
+    repeaterRef.current.start(action)
+  }
+
+  function stopRepeat() {
+    repeaterRef.current.stop()
+  }
+
+  function preventContextMenu(e: React.MouseEvent) {
+    e.preventDefault()
+  }
+
   return (
     <div className="zhk-base">
       <div className="zhk-base__row">
@@ -97,7 +120,11 @@ const KeyboardBase: React.FC<KeyboardBaseProps> = ({ enableHandwriting, mode, on
                   key={`number-${key}`}
 
                   className="zhk-base__key zhk-base__key--letter"
-                  onClick={() => handleKeyPress(key)}
+                  onPointerDown={e => startRepeat(e, () => handleKeyPress(key))}
+                  onPointerUp={stopRepeat}
+                  onPointerLeave={stopRepeat}
+                  onPointerCancel={stopRepeat}
+                  onContextMenu={preventContextMenu}
                 >
                   {key}
                 </button>
@@ -117,6 +144,7 @@ const KeyboardBase: React.FC<KeyboardBaseProps> = ({ enableHandwriting, mode, on
               }`}
               disabled={isChineseMode && isHandwritingButtonDisabled}
               onClick={handleShift}
+              onContextMenu={preventContextMenu}
             >
               {isChineseMode
                 ? handwritingButtonText
@@ -128,7 +156,11 @@ const KeyboardBase: React.FC<KeyboardBaseProps> = ({ enableHandwriting, mode, on
               key={key}
 
               className="zhk-base__key zhk-base__key--letter"
-              onClick={() => handleKeyPress(key)}
+              onPointerDown={e => startRepeat(e, () => handleKeyPress(key))}
+              onPointerUp={stopRepeat}
+              onPointerLeave={stopRepeat}
+              onPointerCancel={stopRepeat}
+              onContextMenu={preventContextMenu}
             >
               {showUpperCase ? key.toUpperCase() : key}
             </button>
@@ -137,7 +169,11 @@ const KeyboardBase: React.FC<KeyboardBaseProps> = ({ enableHandwriting, mode, on
             <button
 
               className="zhk-base__key zhk-base__key--function zhk-base__key--delete"
-              onClick={handleDelete}
+              onPointerDown={e => startRepeat(e, () => handleDelete())}
+              onPointerUp={stopRepeat}
+              onPointerLeave={stopRepeat}
+              onPointerCancel={stopRepeat}
+              onContextMenu={preventContextMenu}
             >
               <img src={keyboardBackspace} className="zhk-base__key-icon" alt="Delete" />
             </button>
@@ -146,29 +182,57 @@ const KeyboardBase: React.FC<KeyboardBaseProps> = ({ enableHandwriting, mode, on
       ))}
 
       <div className="zhk-base__row">
-        <button className="zhk-base__key zhk-base__key--function" onClick={handleSwitchToSymbol}>
+        <button className="zhk-base__key zhk-base__key--function" onClick={handleSwitchToSymbol} onContextMenu={preventContextMenu}>
           符
         </button>
-        <button className="zhk-base__key zhk-base__key--function" onClick={handleSwitchToNum}>
+        <button className="zhk-base__key zhk-base__key--function" onClick={handleSwitchToNum} onContextMenu={preventContextMenu}>
           123
         </button>
-        <button className="zhk-base__key" onClick={() => handleSpecialKey(',')}>
+        <button
+          className="zhk-base__key"
+          onPointerDown={e => startRepeat(e, () => handleSpecialKey(','))}
+          onPointerUp={stopRepeat}
+          onPointerLeave={stopRepeat}
+          onPointerCancel={stopRepeat}
+          onContextMenu={preventContextMenu}
+        >
           ，
         </button>
-        <button className="zhk-base__key zhk-base__key--space" onClick={() => handleSpecialKey(' ')}>
+        <button
+          className="zhk-base__key zhk-base__key--space"
+          onPointerDown={e => startRepeat(e, () => handleSpecialKey(' '))}
+          onPointerUp={stopRepeat}
+          onPointerLeave={stopRepeat}
+          onPointerCancel={stopRepeat}
+          onContextMenu={preventContextMenu}
+        >
           <img src={keyboardSpace} className="zhk-base__key-icon" alt="Space" />
         </button>
-        <button className="zhk-base__key" onClick={() => handleSpecialKey('。')}>
+        <button
+          className="zhk-base__key"
+          onPointerDown={e => startRepeat(e, () => handleSpecialKey('。'))}
+          onPointerUp={stopRepeat}
+          onPointerLeave={stopRepeat}
+          onPointerCancel={stopRepeat}
+          onContextMenu={preventContextMenu}
+        >
           。
         </button>
-        <button className="zhk-base__key zhk-base__key--function" onClick={handleToggleLang}>
+        <button className="zhk-base__key zhk-base__key--function" onClick={handleToggleLang} onContextMenu={preventContextMenu}>
           <span className="zhk-base__toggle-main">{mode === 'zh' ? '中' : '英'}</span>
           <span className="zhk-base__toggle-sub">
             /
             {mode === 'zh' ? '英' : '中'}
           </span>
         </button>
-        <button className="zhk-base__key zhk-base__key--function" onClick={() => handleSpecialKey('enter', true)}>
+        <button
+          className="zhk-base__key zhk-base__key--function"
+          onPointerDown={e => startRepeat(e, () => handleSpecialKey('enter', true))}
+          onPointerUp={stopRepeat}
+          onPointerLeave={stopRepeat}
+          onPointerCancel={stopRepeat}
+          onContextMenu={preventContextMenu}
+        >
           <img src={keyboardReturn} className="zhk-base__key-icon" alt="Enter" />
         </button>
       </div>

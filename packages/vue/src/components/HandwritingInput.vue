@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { KeyEvent } from '../types'
 import { useElementSize } from '@vueuse/core'
-import { CanvasDrawer } from '@zh-keyboard/core'
+import { CanvasDrawer, createKeyRepeater } from '@zh-keyboard/core'
 import { nextTick, onUnmounted, ref, watchEffect } from 'vue'
 import { getHandwritingRecognizer } from '../utils/handwriting'
 import CandidateList from './CandidateList.vue'
@@ -48,6 +48,23 @@ function setupCanvas() {
 
 const candidates = ref<string[]>([])
 
+const repeater = createKeyRepeater()
+
+function startRepeat(e: PointerEvent, action: () => void) {
+  e.preventDefault()
+  ;(e.currentTarget as HTMLElement | null)?.setPointerCapture?.(e.pointerId)
+  repeater.start(action)
+}
+
+function stopRepeat() {
+  repeater.stop()
+}
+
+function pressOnce(e: PointerEvent, action: () => void) {
+  e.preventDefault()
+  action()
+}
+
 // 识别当前笔迹
 async function recognizeStroke() {
   if (!canvasDrawer || canvasDrawer.getStrokeData().length === 0 || isRecognizing.value)
@@ -78,6 +95,7 @@ onUnmounted(() => {
   if (canvasDrawer) {
     canvasDrawer.destroy()
   }
+  repeater.stop()
 })
 
 watchEffect(() => {
@@ -103,15 +121,44 @@ function handleSelection(candidate: string) {
     />
     <div ref="containerRef" class="handwriting-content">
       <div class="handwriting-buttons">
-        <button class="handwriting-btn handwriting-btn--function" @click="emit('key', { key: '。' })">
+        <button
+          class="handwriting-btn handwriting-btn--function"
+          @pointerdown="(e) => startRepeat(e, () => emit('key', { key: '。' }))"
+          @pointerup="stopRepeat"
+          @pointerleave="stopRepeat"
+          @pointercancel="stopRepeat"
+          @contextmenu.prevent
+        >
           。
         </button>
-        <button class="handwriting-btn handwriting-btn--function" @click="emit('key', { key: '？' })">
+        <button
+          class="handwriting-btn handwriting-btn--function"
+          @pointerdown="(e) => startRepeat(e, () => emit('key', { key: '？' }))"
+          @pointerup="stopRepeat"
+          @pointerleave="stopRepeat"
+          @pointercancel="stopRepeat"
+          @contextmenu.prevent
+        >
           ？
         </button>
-        <button class="handwriting-btn handwriting-btn--function" @click="emit('key', { key: '！' })">
+        <button
+          class="handwriting-btn handwriting-btn--function"
+          @pointerdown="(e) => startRepeat(e, () => emit('key', { key: '！' }))"
+          @pointerup="stopRepeat"
+          @pointerleave="stopRepeat"
+          @pointercancel="stopRepeat"
+          @contextmenu.prevent
+        >
           ！
-        </button> <button class="handwriting-btn handwriting-btn--function" @click="emit('key', { key: '、' })">
+        </button>
+        <button
+          class="handwriting-btn handwriting-btn--function"
+          @pointerdown="(e) => startRepeat(e, () => emit('key', { key: '、' }))"
+          @pointerup="stopRepeat"
+          @pointerleave="stopRepeat"
+          @pointercancel="stopRepeat"
+          @contextmenu.prevent
+        >
           、
         </button>
       </div>
@@ -142,16 +189,41 @@ function handleSelection(candidate: string) {
         ></canvas>
       </div>
       <div class="handwriting-buttons">
-        <button class="handwriting-btn handwriting-btn--function" @click="emit('key', { key: 'delete', isControl: true })">
+        <button
+          class="handwriting-btn handwriting-btn--function"
+          @pointerdown="(e) => startRepeat(e, () => emit('key', { key: 'delete', isControl: true }))"
+          @pointerup="stopRepeat"
+          @pointerleave="stopRepeat"
+          @pointercancel="stopRepeat"
+          @contextmenu.prevent
+        >
           <img src="../assets/icons/keyboard-backspace.svg" alt="删除" />
         </button>
-        <button class="handwriting-btn handwriting-btn--function" @click="emit('exit')">
+        <button
+          class="handwriting-btn handwriting-btn--function"
+          @pointerdown="(e) => pressOnce(e, () => emit('exit'))"
+          @contextmenu.prevent
+        >
           返回
         </button>
-        <button class="handwriting-btn handwriting-btn--function" @click="emit('key', { key: '，' })">
+        <button
+          class="handwriting-btn handwriting-btn--function"
+          @pointerdown="(e) => startRepeat(e, () => emit('key', { key: '，' }))"
+          @pointerup="stopRepeat"
+          @pointerleave="stopRepeat"
+          @pointercancel="stopRepeat"
+          @contextmenu.prevent
+        >
           ，
         </button>
-        <button class="handwriting-btn handwriting-btn--function" @click="emit('key', { key: 'enter', isControl: true })">
+        <button
+          class="handwriting-btn handwriting-btn--function"
+          @pointerdown="(e) => startRepeat(e, () => emit('key', { key: 'enter', isControl: true }))"
+          @pointerup="stopRepeat"
+          @pointerleave="stopRepeat"
+          @pointercancel="stopRepeat"
+          @contextmenu.prevent
+        >
           <img src="../assets/icons/keyboard-return.svg" alt="回车" />
         </button>
       </div>

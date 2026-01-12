@@ -1,5 +1,6 @@
 import type { KeyEvent } from '../types'
-import React, { useMemo, useState } from 'react'
+import { createKeyRepeater } from '@zh-keyboard/core'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import lockOpenIconUrl from '../assets/icons/lock-open-outline.svg'
 import lockClosedIconUrl from '../assets/icons/lock-outline.svg'
 import '../styles/SymbolKeyboard.scss'
@@ -16,6 +17,14 @@ const SymbolKeyboard: React.FC<SymbolKeyboardProps> = ({ onKey, onExit }) => {
   const currentSymbolStr = useMemo(() => (symbolType === 'zh' ? zhSymbolStr : enSymbolStr), [symbolType])
   const [isLocked, setIsLocked] = useState(false)
 
+  const repeaterRef = useRef(createKeyRepeater())
+
+  useEffect(() => {
+    return () => {
+      repeaterRef.current.stop()
+    }
+  }, [])
+
   function handleKeyPress(key: string) {
     onKey({ key })
     if (!isLocked) {
@@ -31,6 +40,25 @@ const SymbolKeyboard: React.FC<SymbolKeyboardProps> = ({ onKey, onExit }) => {
     setIsLocked(!isLocked)
   }
 
+  function startRepeat(e: React.PointerEvent, action: () => void) {
+    e.preventDefault()
+    ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
+    repeaterRef.current.start(action)
+  }
+
+  function stopRepeat() {
+    repeaterRef.current.stop()
+  }
+
+  function pressOnce(e: React.PointerEvent, action: () => void) {
+    e.preventDefault()
+    action()
+  }
+
+  function preventContextMenu(e: React.MouseEvent) {
+    e.preventDefault()
+  }
+
   return (
     <div className="symbol-keyboard">
       <div className="symbol-keyboard__content">
@@ -42,6 +70,7 @@ const SymbolKeyboard: React.FC<SymbolKeyboardProps> = ({ onKey, onExit }) => {
                 symbolType === 'zh' ? 'symbol-keyboard__lang-btn--active' : ''
               }`}
               onClick={() => setSymbolType('zh')}
+              onContextMenu={preventContextMenu}
             >
               中文
             </button>
@@ -50,6 +79,7 @@ const SymbolKeyboard: React.FC<SymbolKeyboardProps> = ({ onKey, onExit }) => {
                 symbolType === 'en' ? 'symbol-keyboard__lang-btn--active' : ''
               }`}
               onClick={() => setSymbolType('en')}
+              onContextMenu={preventContextMenu}
             >
               英文
             </button>
@@ -60,6 +90,7 @@ const SymbolKeyboard: React.FC<SymbolKeyboardProps> = ({ onKey, onExit }) => {
                 isLocked ? 'symbol-keyboard__key--locked' : ''
               }`}
               onClick={toggleLock}
+              onContextMenu={preventContextMenu}
             >
               {!isLocked
                 ? (
@@ -72,6 +103,7 @@ const SymbolKeyboard: React.FC<SymbolKeyboardProps> = ({ onKey, onExit }) => {
             <button
               className="symbol-keyboard__key symbol-keyboard__key--function symbol-keyboard__key--back"
               onClick={goBack}
+              onContextMenu={preventContextMenu}
             >
               返回
             </button>
@@ -84,7 +116,17 @@ const SymbolKeyboard: React.FC<SymbolKeyboardProps> = ({ onKey, onExit }) => {
               <button
                 key={`key-${char}`}
                 className="symbol-keyboard__key"
-                onClick={() => handleKeyPress(char)}
+                onPointerDown={(e) => {
+                  if (!isLocked) {
+                    pressOnce(e, () => handleKeyPress(char))
+                    return
+                  }
+                  startRepeat(e, () => handleKeyPress(char))
+                }}
+                onPointerUp={stopRepeat}
+                onPointerLeave={stopRepeat}
+                onPointerCancel={stopRepeat}
+                onContextMenu={preventContextMenu}
               >
                 {char}
               </button>

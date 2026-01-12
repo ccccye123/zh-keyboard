@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { KeyEvent } from '../types'
+import { createKeyRepeater } from '@zh-keyboard/core'
 import backspaceIcon from '../assets/icons/keyboard-backspace.svg'
 import returnIcon from '../assets/icons/keyboard-return.svg'
 import '../styles/NumericKeyboard.scss'
+import { onBeforeUnmount } from 'vue'
 
 withDefaults(defineProps<{
   keyboardRows?: string[][]
@@ -38,6 +40,52 @@ function handleSpecialKey(key: string, isControl = true) {
 function goBack() {
   emit('exit')
 }
+
+const repeater = createKeyRepeater()
+
+function startRepeat(e: PointerEvent, action: () => void) {
+  e.preventDefault()
+  ;(e.currentTarget as HTMLElement | null)?.setPointerCapture?.(e.pointerId)
+  repeater.start(action)
+}
+
+function stopRepeat() {
+  repeater.stop()
+}
+
+onBeforeUnmount(() => {
+  repeater.stop()
+})
+
+function pressOnce(e: PointerEvent, action: () => void) {
+  e.preventDefault()
+  action()
+}
+
+function leftKeyAction(key: string): (() => void) {
+  if (key === 'back')
+    return () => goBack()
+  if (key === 'space')
+    return () => handleKeyPress(' ')
+  return () => handleKeyPress(key)
+}
+
+function onLeftKeyDown(key: string, e: PointerEvent) {
+  const action = leftKeyAction(key)
+  if (key === 'back') {
+    pressOnce(e, action)
+    return
+  }
+  startRepeat(e, action)
+}
+
+function onFunctionKeyDown(key: string, e: PointerEvent) {
+  if (key === '.' || key === '@') {
+    startRepeat(e, () => handleKeyPress(key))
+    return
+  }
+  startRepeat(e, () => handleSpecialKey(key))
+}
 </script>
 
 <template>
@@ -54,7 +102,11 @@ function goBack() {
                 'num-keyboard__key--back': key === 'back',
                 'num-keyboard__key--space': key === 'space',
               }"
-              @click="key === 'back' ? goBack() : (key === 'space' ? handleKeyPress(' ') : handleKeyPress(key))"
+              @pointerdown="(e) => onLeftKeyDown(key, e)"
+              @pointerup="stopRepeat"
+              @pointerleave="stopRepeat"
+              @pointercancel="stopRepeat"
+              @contextmenu.prevent
             >
               <template v-if="key === 'back'">
                 返回
@@ -75,7 +127,11 @@ function goBack() {
           v-for="(fKey, index) in functionKeys"
           :key="`func-${index}`"
           class="num-keyboard__key num-keyboard__key--function"
-          @click="fKey.key === '.' || fKey.key === '@' ? handleKeyPress(fKey.key) : handleSpecialKey(fKey.key)"
+          @pointerdown="(e) => onFunctionKeyDown(fKey.key, e)"
+          @pointerup="stopRepeat"
+          @pointerleave="stopRepeat"
+          @pointercancel="stopRepeat"
+          @contextmenu.prevent
         >
           <img v-if="fKey.icon" :src="fKey.icon" class="num-keyboard__key-icon" :alt="fKey.alt" />
           <span v-else>{{ fKey.text }}</span>

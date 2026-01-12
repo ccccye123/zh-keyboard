@@ -1,5 +1,6 @@
 import type { KeyEvent } from '../types'
-import React from 'react'
+import { createKeyRepeater } from '@zh-keyboard/core'
+import React, { useEffect, useRef } from 'react'
 import keyboardBackspace from '../assets/icons/keyboard-backspace.svg'
 import keyboardReturn from '../assets/icons/keyboard-return.svg'
 import keyboardSpace from '../assets/icons/keyboard-space.svg'
@@ -23,6 +24,14 @@ const NumericKeyboard: React.FC<NumericKeyboardProps> = ({
   onExit,
   keyboardRows = DEFAULT_KEYBOARD_ROWS,
 }) => {
+  const repeaterRef = useRef(createKeyRepeater())
+
+  useEffect(() => {
+    return () => {
+      repeaterRef.current.stop()
+    }
+  }, [])
+
   const functionKeys = [
     { key: 'delete', icon: keyboardBackspace, text: '', alt: 'Delete' },
     { key: '.', icon: '', text: '.', alt: '.' },
@@ -42,6 +51,33 @@ const NumericKeyboard: React.FC<NumericKeyboardProps> = ({
     onExit()
   }
 
+  function startRepeat(e: React.PointerEvent, action: () => void) {
+    e.preventDefault()
+    ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
+    repeaterRef.current.start(action)
+  }
+
+  function stopRepeat() {
+    repeaterRef.current.stop()
+  }
+
+  function pressOnce(e: React.PointerEvent, action: () => void) {
+    e.preventDefault()
+    action()
+  }
+
+  function preventContextMenu(e: React.MouseEvent) {
+    e.preventDefault()
+  }
+
+  function leftKeyAction(key: string): () => void {
+    if (key === 'back')
+      return goBack
+    if (key === 'space')
+      return () => handleKeyPress(' ')
+    return () => handleKeyPress(key)
+  }
+
   return (
     <div className="num-keyboard">
       <div className="num-keyboard__container">
@@ -57,12 +93,18 @@ const NumericKeyboard: React.FC<NumericKeyboardProps> = ({
                     } ${
                       key === 'space' ? 'num-keyboard__key--space' : ''
                     }`}
-                    onClick={() =>
-                      key === 'back'
-                        ? goBack()
-                        : key === 'space'
-                          ? handleKeyPress(' ')
-                          : handleKeyPress(key)}
+                    onPointerDown={e => {
+                      const action = leftKeyAction(key)
+                      if (key === 'back') {
+                        pressOnce(e, action)
+                        return
+                      }
+                      startRepeat(e, action)
+                    }}
+                    onPointerUp={stopRepeat}
+                    onPointerLeave={stopRepeat}
+                    onPointerCancel={stopRepeat}
+                    onContextMenu={preventContextMenu}
                   >
                     {key === 'back'
                       ? (
@@ -87,10 +129,17 @@ const NumericKeyboard: React.FC<NumericKeyboardProps> = ({
             <button
               key={`func-${fKey.key}`}
               className="num-keyboard__key num-keyboard__key--function"
-              onClick={() =>
-                fKey.key === '.' || fKey.key === '@'
-                  ? handleKeyPress(fKey.key)
-                  : handleSpecialKey(fKey.key)}
+              onPointerDown={e => {
+                if (fKey.key === '.' || fKey.key === '@') {
+                  startRepeat(e, () => handleKeyPress(fKey.key))
+                  return
+                }
+                startRepeat(e, () => handleSpecialKey(fKey.key))
+              }}
+              onPointerUp={stopRepeat}
+              onPointerLeave={stopRepeat}
+              onPointerCancel={stopRepeat}
+              onContextMenu={preventContextMenu}
             >
               {fKey.icon
                 ? (

@@ -1,7 +1,7 @@
 import type { KeyEvent } from '../types'
 import { useElementSize } from '@reactuses/core'
-import { CanvasDrawer } from '@zh-keyboard/core'
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { CanvasDrawer, createKeyRepeater } from '@zh-keyboard/core'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import keyboardBackspace from '../assets/icons/keyboard-backspace.svg'
 import keyboardReturn from '../assets/icons/keyboard-return.svg'
 import { getHandwritingRecognizer } from '../utils/handwriting'
@@ -21,6 +21,14 @@ const HandwritingInput: React.FC<HandwritingInputProps> = ({ recognizerInitializ
   const canvasDrawer = useRef<CanvasDrawer | null>(null)
   const isRecognizing = useRef(false)
   const [candidates, setCandidates] = useState<string[]>([])
+
+  const repeaterRef = useRef(createKeyRepeater())
+
+  useEffect(() => {
+    return () => {
+      repeaterRef.current.stop()
+    }
+  }, [])
 
   const recognizeStroke = useCallback(async () => {
     if (!canvasDrawer.current || canvasDrawer.current.getStrokeData().length === 0 || isRecognizing.current)
@@ -81,6 +89,25 @@ const HandwritingInput: React.FC<HandwritingInputProps> = ({ recognizerInitializ
     clearCanvas()
   }
 
+  function startRepeat(e: React.PointerEvent, action: () => void) {
+    e.preventDefault()
+    ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
+    repeaterRef.current.start(action)
+  }
+
+  function stopRepeat() {
+    repeaterRef.current.stop()
+  }
+
+  function pressOnce(e: React.PointerEvent, action: () => void) {
+    e.preventDefault()
+    action()
+  }
+
+  function preventContextMenu(e: React.MouseEvent) {
+    e.preventDefault()
+  }
+
   return (
     <div className="handwriting-input">
       <CandidateList candidates={candidates} onSelect={handleSelection} />
@@ -89,16 +116,44 @@ const HandwritingInput: React.FC<HandwritingInputProps> = ({ recognizerInitializ
           ? (
               <>
                 <div className="handwriting-buttons">
-                  <button className="handwriting-btn handwriting-btn--function" onClick={() => onKey({ key: '。' })}>
+                  <button
+                    className="handwriting-btn handwriting-btn--function"
+                    onPointerDown={e => startRepeat(e, () => onKey({ key: '。' }))}
+                    onPointerUp={stopRepeat}
+                    onPointerLeave={stopRepeat}
+                    onPointerCancel={stopRepeat}
+                    onContextMenu={preventContextMenu}
+                  >
                     。
                   </button>
-                  <button className="handwriting-btn handwriting-btn--function" onClick={() => onKey({ key: '？' })}>
+                  <button
+                    className="handwriting-btn handwriting-btn--function"
+                    onPointerDown={e => startRepeat(e, () => onKey({ key: '？' }))}
+                    onPointerUp={stopRepeat}
+                    onPointerLeave={stopRepeat}
+                    onPointerCancel={stopRepeat}
+                    onContextMenu={preventContextMenu}
+                  >
                     ？
                   </button>
-                  <button className="handwriting-btn handwriting-btn--function" onClick={() => onKey({ key: '！' })}>
+                  <button
+                    className="handwriting-btn handwriting-btn--function"
+                    onPointerDown={e => startRepeat(e, () => onKey({ key: '！' }))}
+                    onPointerUp={stopRepeat}
+                    onPointerLeave={stopRepeat}
+                    onPointerCancel={stopRepeat}
+                    onContextMenu={preventContextMenu}
+                  >
                     ！
                   </button>
-                  <button className="handwriting-btn handwriting-btn--function" onClick={() => onKey({ key: '、' })}>
+                  <button
+                    className="handwriting-btn handwriting-btn--function"
+                    onPointerDown={e => startRepeat(e, () => onKey({ key: '、' }))}
+                    onPointerUp={stopRepeat}
+                    onPointerLeave={stopRepeat}
+                    onPointerCancel={stopRepeat}
+                    onContextMenu={preventContextMenu}
+                  >
                     、
                   </button>
                 </div>
@@ -131,16 +186,41 @@ const HandwritingInput: React.FC<HandwritingInputProps> = ({ recognizerInitializ
                       )}
                 </div>
                 <div className="handwriting-buttons">
-                  <button className="handwriting-btn handwriting-btn--function" onClick={() => onKey({ key: 'delete', isControl: true })}>
+                  <button
+                    className="handwriting-btn handwriting-btn--function"
+                    onPointerDown={e => startRepeat(e, () => onKey({ key: 'delete', isControl: true }))}
+                    onPointerUp={stopRepeat}
+                    onPointerLeave={stopRepeat}
+                    onPointerCancel={stopRepeat}
+                    onContextMenu={preventContextMenu}
+                  >
                     <img src={keyboardBackspace} alt="删除" />
                   </button>
-                  <button className="handwriting-btn handwriting-btn--function" onClick={onExit}>
+                  <button
+                    className="handwriting-btn handwriting-btn--function"
+                    onPointerDown={e => pressOnce(e, onExit)}
+                    onContextMenu={preventContextMenu}
+                  >
                     返回
                   </button>
-                  <button className="handwriting-btn handwriting-btn--function" onClick={() => onKey({ key: '，' })}>
+                  <button
+                    className="handwriting-btn handwriting-btn--function"
+                    onPointerDown={e => startRepeat(e, () => onKey({ key: '，' }))}
+                    onPointerUp={stopRepeat}
+                    onPointerLeave={stopRepeat}
+                    onPointerCancel={stopRepeat}
+                    onContextMenu={preventContextMenu}
+                  >
                     ，
                   </button>
-                  <button className="handwriting-btn handwriting-btn--function" onClick={() => onKey({ key: 'enter', isControl: true })}>
+                  <button
+                    className="handwriting-btn handwriting-btn--function"
+                    onPointerDown={e => startRepeat(e, () => onKey({ key: 'enter', isControl: true }))}
+                    onPointerUp={stopRepeat}
+                    onPointerLeave={stopRepeat}
+                    onPointerCancel={stopRepeat}
+                    onContextMenu={preventContextMenu}
+                  >
                     <img src={keyboardReturn} alt="回车" />
                   </button>
                 </div>

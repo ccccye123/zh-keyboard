@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { KeyEvent } from '../types'
-import { computed, ref } from 'vue'
+import { createKeyRepeater } from '@zh-keyboard/core'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import CandidateBar from './CandidateBar.vue'
 import '../styles/KeyboardBase.scss'
 
@@ -58,6 +59,22 @@ const keyboardRows = [
 
 const pinyin = ref('')
 
+const repeater = createKeyRepeater()
+
+function startRepeat(e: PointerEvent, action: () => void) {
+  e.preventDefault()
+  ;(e.currentTarget as HTMLElement | null)?.setPointerCapture?.(e.pointerId)
+  repeater.start(action)
+}
+
+function stopRepeat() {
+  repeater.stop()
+}
+
+onBeforeUnmount(() => {
+  repeater.stop()
+})
+
 function handleDelete() {
   if (mode.value === 'zh' && pinyin.value) {
     // 在中文模式下，删除拼音
@@ -109,7 +126,11 @@ const isHandwritingButtonDisabled = computed(() => {
 
           :key="`number-${keyIndex}`"
           class="zhk-base__key zhk-base__key--letter"
-          @click="handleKeyPress(key)"
+          @pointerdown="(e) => startRepeat(e, () => handleKeyPress(key))"
+          @pointerup="stopRepeat"
+          @pointerleave="stopRepeat"
+          @pointercancel="stopRepeat"
+          @contextmenu.prevent
         >
           {{ key }}
         </button>
@@ -126,6 +147,7 @@ const isHandwritingButtonDisabled = computed(() => {
         }"
         :disabled="isChineseMode && isHandwritingButtonDisabled"
         @click="handleShift"
+        @contextmenu.prevent
       >
         <template v-if="isChineseMode">
           {{ handwritingButtonText }}
@@ -139,7 +161,11 @@ const isHandwritingButtonDisabled = computed(() => {
         v-for="(key, keyIndex) in row"
         :key="`key-${rowIndex}-${keyIndex}`"
         class="zhk-base__key zhk-base__key--letter"
-        @click="handleKeyPress(key)"
+        @pointerdown="(e) => startRepeat(e, () => handleKeyPress(key))"
+        @pointerup="stopRepeat"
+        @pointerleave="stopRepeat"
+        @pointercancel="stopRepeat"
+        @contextmenu.prevent
       >
         {{ showUpperCase ? key.toUpperCase() : key }}
       </button>
@@ -147,33 +173,65 @@ const isHandwritingButtonDisabled = computed(() => {
       <button
         v-if="rowIndex === 2"
         class="zhk-base__key zhk-base__key--function zhk-base__key--delete"
-        @click="() => handleDelete()"
+        @pointerdown="(e) => startRepeat(e, () => handleDelete())"
+        @pointerup="stopRepeat"
+        @pointerleave="stopRepeat"
+        @pointercancel="stopRepeat"
+        @contextmenu.prevent
       >
         <img src="../assets/icons/keyboard-backspace.svg" class="zhk-base__key-icon" alt="Delete" />
       </button>
     </div>
 
     <div class="zhk-base__row">
-      <button class="zhk-base__key zhk-base__key--function" @click="handleSwitchToSymbol">
+      <button class="zhk-base__key zhk-base__key--function" @click="handleSwitchToSymbol" @contextmenu.prevent>
         符
       </button>
-      <button class="zhk-base__key zhk-base__key--function" @click="handleSwitchToNum">
+      <button class="zhk-base__key zhk-base__key--function" @click="handleSwitchToNum" @contextmenu.prevent>
         123
       </button>
-      <button class="zhk-base__key" @click="() => handleSpecialKey(',')">
+      <button
+        class="zhk-base__key"
+        @pointerdown="(e) => startRepeat(e, () => handleSpecialKey(','))"
+        @pointerup="stopRepeat"
+        @pointerleave="stopRepeat"
+        @pointercancel="stopRepeat"
+        @contextmenu.prevent
+      >
         ，
       </button>
-      <button class="zhk-base__key zhk-base__key--space" @click="() => handleSpecialKey(' ')">
+      <button
+        class="zhk-base__key zhk-base__key--space"
+        @pointerdown="(e) => startRepeat(e, () => handleSpecialKey(' '))"
+        @pointerup="stopRepeat"
+        @pointerleave="stopRepeat"
+        @pointercancel="stopRepeat"
+        @contextmenu.prevent
+      >
         <img src="../assets/icons/keyboard-space.svg" class="zhk-base__key-icon" alt="Space" />
       </button>
-      <button class="zhk-base__key" @click="() => handleSpecialKey('。')">
+      <button
+        class="zhk-base__key"
+        @pointerdown="(e) => startRepeat(e, () => handleSpecialKey('。'))"
+        @pointerup="stopRepeat"
+        @pointerleave="stopRepeat"
+        @pointercancel="stopRepeat"
+        @contextmenu.prevent
+      >
         。
       </button>
-      <button class="zhk-base__key zhk-base__key--function" @click="handleToggleLang">
+      <button class="zhk-base__key zhk-base__key--function" @click="handleToggleLang" @contextmenu.prevent>
         <span class="zhk-base__toggle-main">{{ mode === 'zh' ? '中' : '英' }}</span>
         <span class="zhk-base__toggle-sub">/{{ mode === 'zh' ? '英' : '中' }}</span>
       </button>
-      <button class="zhk-base__key zhk-base__key--function" @click="() => handleSpecialKey('enter', true)">
+      <button
+        class="zhk-base__key zhk-base__key--function"
+        @pointerdown="(e) => startRepeat(e, () => handleSpecialKey('enter', true))"
+        @pointerup="stopRepeat"
+        @pointerleave="stopRepeat"
+        @pointercancel="stopRepeat"
+        @contextmenu.prevent
+      >
         <img src="../assets/icons/keyboard-return.svg" class="zhk-base__key-icon" alt="Enter" />
       </button>
     </div>
