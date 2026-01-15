@@ -49,14 +49,14 @@
     "@reactuses/core": "^6.0.3",
     "@zh-keyboard/core": "workspace:*",
     "@zh-keyboard/recognizer": "workspace:*",
-    "classnames": "^2.5.1",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "classnames": "^2.5.1"
   },
   "devDependencies": {
-    "@types/react": "^19.1.2",
-    "@types/react-dom": "^19.1.2",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
     "@vitejs/plugin-react": "^4.4.1",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
     "sass-embedded": "^1.86.3",
     "typescript": "~5.8.3",
     "vite": "^6.3.5",
